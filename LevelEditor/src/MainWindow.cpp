@@ -2,6 +2,7 @@
 #include "ui_MainWindow.h"
 
 #include "ObjectsList.h"
+#include "LevelView.h"
 
 #include <QDockWidget>
 
@@ -27,6 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     this->addDockWidget(Qt::RightDockWidgetArea, createDockWidget<ObjectsList>(this));
+
+    ui->mdiArea->addSubWindow(new LevelView(15, 30, this));
 }
 
 MainWindow::~MainWindow()

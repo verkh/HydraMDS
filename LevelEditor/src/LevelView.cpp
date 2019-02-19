@@ -1,5 +1,13 @@
 #include "LevelView.h"
 
+#include "ObjectsList.h"
+
+#include <QDrag>
+#include <QMimeData>
+#include <QDropEvent>
+#include <QDragMoveEvent>
+#include <QDragEnterEvent>
+#include <QDragLeaveEvent>
 LevelView::LevelView(int height, int width, QWidget *parent)
     :QGraphicsView(parent)
     ,height_(height)
@@ -10,7 +18,7 @@ LevelView::LevelView(int height, int width, QWidget *parent)
 
 void LevelView::dragEnterEvent(QDragEnterEvent *event)
 {
-    if (event->mimeData()->hasFormat(PiecesList::puzzleMimeType()))
+    if (event->mimeData()->hasFormat(ObjectsList::mimeType())) //TODO move out of ObjectList
         event->accept();
     else
         event->ignore();
@@ -18,24 +26,24 @@ void LevelView::dragEnterEvent(QDragEnterEvent *event)
 
 void LevelView::dragLeaveEvent(QDragLeaveEvent *event)
 {
-    QRect updateRect = highlightedRect;
-    highlightedRect = QRect();
+    QRect updateRect = highlightedRect_;
+    highlightedRect_ = QRect();
     update(updateRect);
     event->accept();
 }
 
 void LevelView::dragMoveEvent(QDragMoveEvent *event)
 {
-    QRect updateRect = highlightedRect.united(targetSquare(event->pos()));
+    QRect updateRect = highlightedRect_.united(targetPlace(event->pos()));
 
-    if (event->mimeData()->hasFormat(PiecesList::puzzleMimeType())
-        && findPiece(targetSquare(event->pos())) == -1) {
+    if (event->mimeData()->hasFormat(ObjectsList::mimeType())
+        && findObject(targetPlace(event->pos())) == -1) {
 
-        highlightedRect = targetSquare(event->pos());
+        highlightedRect_ = targetPlace(event->pos());
         event->setDropAction(Qt::MoveAction);
         event->accept();
     } else {
-        highlightedRect = QRect();
+        highlightedRect_ = QRect();
         event->ignore();
     }
 
@@ -44,57 +52,42 @@ void LevelView::dragMoveEvent(QDragMoveEvent *event)
 
 void LevelView::dropEvent(QDropEvent *event)
 {
-    if (event->mimeData()->hasFormat(Level::puzzleMimeType())
-        && findPiece(targetSquare(event->pos())) == -1)
+    if (event->mimeData()->hasFormat(ObjectsList::mimeType())
+        && findObject(targetPlace(event->pos())) == -1)
     {
 
-        QByteArray pieceData = event->mimeData()->data(PiecesList::puzzleMimeType());
+        QByteArray pieceData = event->mimeData()->data(ObjectsList::mimeType());
         QDataStream dataStream(&pieceData, QIODevice::ReadOnly);
-        Piece piece;
-        piece.rect = targetSquare(event->pos());
-        dataStream >> piece.pixmap >> piece.location;
+        Object piece;
+        piece.rect = targetPlace(event->pos());
+        dataStream >> piece.pixmap >> piece.position;
 
-        pieces.append(piece);
+        objects_.push_back(piece);
 
-        highlightedRect = QRect();
+        highlightedRect_ = QRect();
         update(piece.rect);
 
         event->setDropAction(Qt::MoveAction);
         event->accept();
-
-        if (piece.location == piece.rect.topLeft() / pieceSize())
-        {
-            inPlace++;
-        }
     }
     else
     {
-        highlightedRect = QRect();
+        highlightedRect_ = QRect();
         event->ignore();
     }
 }
 
-int LevelView::findPiece(const QRect &pieceRect) const
+int LevelView::findObject(const QRect &pieceRect) const
 {
-    for (int i = 0, size = pieces.size(); i < size; ++i)
+    for (int i = 0, size = objects_.size(); i < size; ++i)
     {
-        if (pieces.at(i).rect == pieceRect)
+        if (objects_[i].rect == pieceRect)
             return i;
     }
     return -1;
 }
 
-QRect LevelView::targetPlace(const QPoint &position) const
+const QRect LevelView::targetPlace(const QPoint &position) const
 {
-    return QRect(position / pieceSize() * pieceSize(), QSize(pieceSize(), pieceSize()));
-}
-
-int LevelView::pieceSize() const
-{
-    return 15;
-}
-
-int LevelView::imageSize() const
-{
-    return 15*30;
+    return QRect(position / width_ * width_, QSize(15, 15));
 }
