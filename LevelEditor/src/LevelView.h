@@ -5,7 +5,9 @@
 
 #include <QGraphicsView>
 
-class LevelView : public QWidget
+class QWheelEvent;
+class QKeyEvent;
+class LevelView : public QGraphicsView
 {
     Q_OBJECT
 public:
@@ -17,7 +19,19 @@ protected:
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
+    void spaintEvent(QPaintEvent* event);
+
+    void wheelEvent(QWheelEvent *event);
+
+    void zoomIn(int level = 1);
+    void zoomOut(int level = 1);
+    void setupZoom(int value);
+
+    int getLastMatrix() const;
+
+    void addNewObject(const Object& object);
+
+    void setGrid();
 
 private:
     int findObject(const QRect& rect) const;
@@ -31,6 +45,8 @@ private:
 
     QRect highlightedRect_;
     Object dragObject_;
+
+    int lastMatrix;
 };
 
 #endif // LEVELVIEW_H

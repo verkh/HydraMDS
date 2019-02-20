@@ -7,16 +7,21 @@
 #include <QPainter>
 #include <QMimeData>
 #include <QDragEnterEvent>
+#include <QGraphicsPixmapItem>
+
+#include <cmath>
 
 LevelView::LevelView(int numOfVetiocalCells, int numOfHorizontalCells, QWidget* parent)
-    :QWidget(parent)
+    :QGraphicsView(parent)
     ,objectSize_(30) // FIXME not magic const
     ,height_(numOfVetiocalCells*  objectSize_)
     ,width_(numOfHorizontalCells* objectSize_)
 {
     setAcceptDrops(true);
+    setScene(new QGraphicsScene(0,0, width_, height_));
 
     setMinimumSize({height_, width_});
+    ensureVisible(QRect());
 }
 
 void LevelView::dragEnterEvent(QDragEnterEvent* event)
@@ -63,7 +68,8 @@ void LevelView::dropEvent(QDropEvent* event)
         objects_.push_back(dragObject_);
 
         highlightedRect_ = QRect();
-        update(dragObject_.getRect());
+
+        addNewObject(dragObject_);
 
         event->acceptProposedAction();
     }
@@ -115,7 +121,7 @@ void LevelView::mousePressEvent(QMouseEvent* event)
     }
 }
 
-void LevelView::paintEvent(QPaintEvent* event)
+void LevelView::spaintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
     painter.fillRect(event->rect(), Qt::white);
@@ -133,3 +139,64 @@ void LevelView::paintEvent(QPaintEvent* event)
     for(const auto& object : objects_)
         painter.drawPixmap(object.getRect(), object.getPixmap());
 }
+
+void LevelView::wheelEvent(QWheelEvent *event)
+{
+    if (event->delta() > 0)
+        zoomIn(6);
+    else
+        zoomOut(6);
+    event->accept();
+}
+
+void LevelView::zoomIn(int level)
+{
+    setupZoom(lastMatrix + level);
+}
+
+void LevelView::zoomOut(int level)
+{
+    setupZoom(lastMatrix - level);
+}
+
+void LevelView::setupZoom(int value)
+{
+    auto scale = std::pow(2., (value - 250.) / 50.);
+    lastMatrix = value;
+    QMatrix matrix;
+    matrix.scale(scale, scale);
+
+    setMatrix(matrix);
+}
+
+int LevelView::getLastMatrix() const
+{
+    return lastMatrix;
+}
+
+void LevelView::addNewObject(const Object &object)
+{
+    auto newItem = new QGraphicsPixmapItem(object.getPixmap());
+    scene()->addItem(newItem);
+    newItem->moveBy(object.getPosition().x(),
+                    object.getPosition().y());
+    newItem->show();
+}
+
+void LevelView::setGrid()
+{
+    for (int x = 0; x <= sceneWidth; x+=10)
+    {
+        QGraphicsLineItem* item = scene()->addLine(x,0,x,sceneHeight, QPen(Qt::white));
+        item->setOpacity(0.25);
+        item->setFlags(QGraphicsItem::ItemNegativeZStacksBehindParent);
+    }
+
+    for (int y = 0; y <= sceneHeight; y+=10)
+    {
+        QGraphicsLineItem* item =  scene()->addLine(0,y,sceneWidth,y, QPen(Qt::white));
+        item->setOpacity(0.25);
+        item->setFlags(QGraphicsItem::ItemNegativeZStacksBehindParent);
+    }
+}
+
