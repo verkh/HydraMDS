@@ -3,21 +3,22 @@
 
 #include <QGraphicsView>
 
-class LevelView : public QGraphicsView
+class LevelView : public QWidget
 {
+    Q_OBJECT
 public:
-    LevelView(int height, int width, QWidget* parent = nullptr);
+    LevelView(int numOfVetiocalCells, int numOfHorizontalCells, QWidget* parent = nullptr);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragLeaveEvent(QDragLeaveEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
-    //void mousePressEvent(QMouseEvent *event) override;
-    //void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 
 private:
-    int findObject(const QRect &pieceRect) const;
+    int findObject(const QRect &rect) const;
     const QRect targetPlace(const QPoint &position) const;
 
     struct Object
@@ -29,6 +30,7 @@ private:
 
     std::vector<Object> objects_;
 
+    int objectSize_ = 30;
     int height_ = 0;
     int width_  = 0;
 
