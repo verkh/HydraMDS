@@ -1,16 +1,24 @@
 #include "ObjectsList.h"
 
+#include "Object.h"
+
 #include <QDrag>
 #include <QMimeData>
 ObjectsList::ObjectsList(QWidget *parent)
     :QListWidget(parent)
 {
-    //TMP
-    auto item = new QListWidgetItem(QIcon::fromTheme("edit-undo"), "icon");
-    this->addItem(item);
+
+    objects_ = //TMP
+    {
+        { new QListWidgetItem(QIcon("images/player.png"), "Player"), Object(QPixmap("images/player.png"), QRect(), QPoint()) },
+        { new QListWidgetItem(QIcon("images/ground.png"), "Ground"), Object(QPixmap("images/ground.png"), QRect(), QPoint()) },
+        { new QListWidgetItem(QIcon("images/ladder.png"), "Ladder"), Object(QPixmap("images/ladder.png"), QRect(), QPoint()) },
+    };
+
+    for(const auto& pair : objects_)
+        addItem(pair.first);
 
     setDragEnabled(true);
-    setDefaultDropAction(Qt::CopyAction);
 }
 
 ObjectsList::~ObjectsList()
@@ -22,19 +30,11 @@ void ObjectsList::startDrag(Qt::DropActions)
 {
     QListWidgetItem *item = currentItem();
 
-    QByteArray itemData;
-    QDataStream dataStream(&itemData, QIODevice::WriteOnly);
-    QPixmap pixmap = item->icon().pixmap(30,30);
-
-    dataStream << pixmap << item->text();
-
-    QMimeData *mimeData = new QMimeData;
-    mimeData->setData(mimeType(), itemData);
+    auto object = objects_.at(item);
 
     QDrag *drag = new QDrag(this);
-    drag->setMimeData(mimeData);
-    drag->setHotSpot(QPoint(pixmap.width()/2, pixmap.height()/2));
-    drag->setPixmap(pixmap);
+    drag->setMimeData(object.toMimeData());
+    drag->setPixmap(object.getPixmap());
 
     drag->exec(Qt::CopyAction);
 }

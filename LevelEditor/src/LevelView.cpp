@@ -7,24 +7,27 @@
 #include <QPainter>
 #include <QMimeData>
 #include <QDragEnterEvent>
-LevelView::LevelView(int numOfVetiocalCells, int numOfHorizontalCells, QWidget *parent)
+
+LevelView::LevelView(int numOfVetiocalCells, int numOfHorizontalCells, QWidget* parent)
     :QWidget(parent)
     ,objectSize_(30) // FIXME not magic const
-    ,height_(numOfVetiocalCells * objectSize_)
+    ,height_(numOfVetiocalCells*  objectSize_)
     ,width_(numOfHorizontalCells* objectSize_)
 {
     setAcceptDrops(true);
+
+    setMinimumSize({height_, width_});
 }
 
-void LevelView::dragEnterEvent(QDragEnterEvent *event)
+void LevelView::dragEnterEvent(QDragEnterEvent* event)
 {
-    if (event->mimeData()->hasFormat(ObjectsList::mimeType())) //TODO move out of ObjectList
+    if(event->mimeData()->hasFormat(Object::mimeType()))
         event->accept();
     else
         event->ignore();
 }
 
-void LevelView::dragLeaveEvent(QDragLeaveEvent *event)
+void LevelView::dragLeaveEvent(QDragLeaveEvent* event)
 {
     QRect updateRect = highlightedRect_;
     highlightedRect_ = QRect();
@@ -32,16 +35,17 @@ void LevelView::dragLeaveEvent(QDragLeaveEvent *event)
     event->accept();
 }
 
-void LevelView::dragMoveEvent(QDragMoveEvent *event)
+void LevelView::dragMoveEvent(QDragMoveEvent* event)
 {
     QRect updateRect = highlightedRect_.united(targetPlace(event->pos()));
 
-    if (event->mimeData()->hasFormat(ObjectsList::mimeType())
+    if(event->mimeData()->hasFormat(Object::mimeType())
         && findObject(targetPlace(event->pos())) == -1) {
 
+        dragObject_ = Object::from(event->mimeData());
+
         highlightedRect_ = targetPlace(event->pos());
-        event->setDropAction(Qt::CopyAction);
-        event->accept();
+        event->acceptProposedAction();
     } else {
         highlightedRect_ = QRect();
         event->ignore();
@@ -50,25 +54,18 @@ void LevelView::dragMoveEvent(QDragMoveEvent *event)
     update(updateRect);
 }
 
-void LevelView::dropEvent(QDropEvent *event)
+void LevelView::dropEvent(QDropEvent* event)
 {
-    if (event->mimeData()->hasFormat(ObjectsList::mimeType())
+    if(event->mimeData()->hasFormat(Object::mimeType())
         && findObject(targetPlace(event->pos())) == -1)
     {
-
-        QByteArray pieceData = event->mimeData()->data(ObjectsList::mimeType());
-        QDataStream dataStream(&pieceData, QIODevice::ReadOnly);
-        Object object;
-        object.rect = targetPlace(event->pos());
-        dataStream >> object.pixmap >> object.position;
-
-        objects_.push_back(object);
+        dragObject_.setRect(targetPlace(event->pos()));
+        objects_.push_back(dragObject_);
 
         highlightedRect_ = QRect();
-        update(object.rect);
+        update(dragObject_.getRect());
 
-        event->setDropAction(Qt::CopyAction);
-        event->accept();
+        event->acceptProposedAction();
     }
     else
     {
@@ -77,63 +74,62 @@ void LevelView::dropEvent(QDropEvent *event)
     }
 }
 
-int LevelView::findObject(const QRect &rect) const
+int LevelView::findObject(const QRect& rect) const
 {
-    for (int i = 0, size = objects_.size(); i < size; ++i)
+    for(int i = 0, size = objects_.size(); i < size; ++i)
     {
-        if (objects_[i].rect == rect)
+        if(objects_[i].getRect() == rect)
             return i;
     }
     return -1;
 }
 
-const QRect LevelView::targetPlace(const QPoint &position) const
+const QRect LevelView::targetPlace(const QPoint& position) const
 {
-    return QRect(position/objectSize_*objectSize_, QSize(objectSize_, objectSize_));
+    const auto x = position.x()/objectSize_;
+    const auto y = position.y()/objectSize_;
+    return QRect(QPoint(x, y)*objectSize_, QSize(objectSize_, objectSize_));
 }
 
-void LevelView::mousePressEvent(QMouseEvent *event)
+void LevelView::mousePressEvent(QMouseEvent* event)
 {
-    QRect square = targetPlace(event->pos());
+    const QRect square = targetPlace(event->pos());
     const int found = findObject(square);
 
-    if (found == -1)
+    if(found == -1)
         return;
 
-    auto object = objects_.at(found);
+    const auto& object = objects_.at(found);
 
     update(square);
 
-    QByteArray itemData;
-    QDataStream dataStream(&itemData, QIODevice::WriteOnly);
+    const auto drag = new QDrag(this);
+    drag->setMimeData(object.toMimeData());
+    drag->setPixmap(object.getPixmap());
 
-    dataStream << object.pixmap << object.position;
-
-    QMimeData *mimeData = new QMimeData;
-    mimeData->setData(ObjectsList::mimeType(), itemData);
-
-    QDrag *drag = new QDrag(this);
-    drag->setMimeData(mimeData);
-    drag->setHotSpot(event->pos() - square.topLeft());
-    drag->setPixmap(object.pixmap);
-
-    if (drag->exec(Qt::MoveAction) != Qt::MoveAction) {
+    auto e = drag->exec(Qt::MoveAction);
+    if(e != Qt::MoveAction)
+    {
         objects_.insert(objects_.begin() + found, object);
         update(targetPlace(event->pos()));
     }
 }
 
-void LevelView::paintEvent(QPaintEvent *event)
+void LevelView::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
     painter.fillRect(event->rect(), Qt::white);
 
-    if (highlightedRect_.isValid()) {
-        painter.setBrush(QColor("#ffcccc"));
+    if(highlightedRect_.isValid())
+    {
+        QColor color(Qt::yellow);
+        color.setAlpha(100);
+        painter.setBrush(color);
         painter.setPen(Qt::NoPen);
-        painter.drawRect(highlightedRect_.adjusted(0, 0, -1, -1));
+        painter.drawRect(highlightedRect_);
+        painter.drawPixmap(highlightedRect_, dragObject_.getPixmap());
     }
 
-    for (const auto &object : objects_)
-        painter.drawPixmap(object.rect, object.pixmap);
+    for(const auto& object : objects_)
+        painter.drawPixmap(object.getRect(), object.getPixmap());
 }
