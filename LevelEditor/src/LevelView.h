@@ -3,7 +3,9 @@
 
 #include "Object.h"
 
+#include <memory>
 #include <QGraphicsView>
+#include <QGraphicsPixmapItem>
 
 class QWheelEvent;
 class QKeyEvent;
@@ -19,23 +21,18 @@ protected:
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
-    void spaintEvent(QPaintEvent* event);
-
-    void wheelEvent(QWheelEvent *event);
-
-    void zoomIn(int level = 1);
-    void zoomOut(int level = 1);
-    void setupZoom(int value);
-
-    int getLastMatrix() const;
 
     void addNewObject(const Object& object, const QPoint &position);
+    QGraphicsPixmapItem* addNewObject(QGraphicsPixmapItem* item);
 
     void setGrid();
 
+    QGraphicsPixmapItem* itemAt(const QPoint& position) const;
+
+    QPoint mapToScene(const QPoint& position) const;
 private:
-    int findObject(const QRect& rect) const;
-    const QRect targetPlace(const QPoint& position) const;
+    int findObject(const QPoint& position) const;
+    const QPoint targetPlace(const QPoint& position) const;
 
     std::vector<Object> objects_;
 
@@ -43,10 +40,8 @@ private:
     int height_ = 0;
     int width_  = 0;
 
-    QRect highlightedRect_;
-    Object dragObject_;
-
-    int lastMatrix;
+    std::unique_ptr<QGraphicsPixmapItem> highlight_;
+    std::unique_ptr<Object> dragObject_;
 };
 
 #endif // LEVELVIEW_H

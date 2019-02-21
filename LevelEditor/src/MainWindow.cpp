@@ -5,7 +5,7 @@
 #include "LevelView.h"
 
 #include <QDockWidget>
-
+#include <QMdiSubWindow>
 namespace
 {
 
@@ -29,7 +29,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->addDockWidget(Qt::RightDockWidgetArea, createDockWidget<ObjectsList>(this));
 
-    ui->mdiArea->addSubWindow(new LevelView(15, 30, this));
+    auto w = new LevelView(15, 30, this);
+    auto sub = ui->mdiArea->addSubWindow(w);
+    sub->layout()->setAlignment(w, Qt::AlignCenter);
+
 }
 
 MainWindow::~MainWindow()

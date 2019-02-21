@@ -19,6 +19,7 @@ class Object
 public:
     Object() = default;
     Object(const QPixmap& pixmap, const QRect& rect, const QPoint& position);
+    Object(const QMimeData*);
 
     static QString mimeType();
 

@@ -9,6 +9,14 @@ Object::Object(const QPixmap& pixmap, const QRect& rect, const QPoint& position)
 
 }
 
+Object::Object(const QMimeData* mimeData)
+{
+    QByteArray data = mimeData->data(mimeType());
+
+    QDataStream dataStream(&data, QIODevice::ReadOnly);
+    dataStream >> pixmap >> position;
+}
+
 QString Object::mimeType()
 {
     return "tile.object";
@@ -16,14 +24,7 @@ QString Object::mimeType()
 
 Object Object::from(const QMimeData* mimeData)
 {
-    Object result;
-
-    QByteArray data = mimeData->data(mimeType());
-
-    QDataStream dataStream(&data, QIODevice::ReadOnly);
-    dataStream >> result.pixmap >> result.position;
-
-    return result;
+    return Object(mimeData);
 }
 
 QMimeData* Object::toMimeData() const
