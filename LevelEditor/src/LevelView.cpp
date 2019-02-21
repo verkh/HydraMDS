@@ -20,8 +20,9 @@ LevelView::LevelView(int numOfVetiocalCells, int numOfHorizontalCells, QWidget* 
     setAcceptDrops(true);
     setScene(new QGraphicsScene(0,0, width_, height_));
 
-    setMinimumSize({height_, width_});
     ensureVisible(QRect());
+    setMaximumSize({width_, height_});
+    setGrid();
 }
 
 void LevelView::dragEnterEvent(QDragEnterEvent* event)
@@ -67,9 +68,9 @@ void LevelView::dropEvent(QDropEvent* event)
         dragObject_.setRect(targetPlace(event->pos()));
         objects_.push_back(dragObject_);
 
-        highlightedRect_ = QRect();
+        addNewObject(dragObject_, highlightedRect_.topLeft());
 
-        addNewObject(dragObject_);
+        highlightedRect_ = QRect();
 
         event->acceptProposedAction();
     }
@@ -92,8 +93,9 @@ int LevelView::findObject(const QRect& rect) const
 
 const QRect LevelView::targetPlace(const QPoint& position) const
 {
-    const auto x = position.x()/objectSize_;
-    const auto y = position.y()/objectSize_;
+    auto mapedToScepePoint = mapToScene(position);
+    const auto x = mapedToScepePoint.x()/objectSize_;
+    const auto y = mapedToScepePoint.y()/objectSize_;
     return QRect(QPoint(x, y)*objectSize_, QSize(objectSize_, objectSize_));
 }
 
@@ -174,27 +176,26 @@ int LevelView::getLastMatrix() const
     return lastMatrix;
 }
 
-void LevelView::addNewObject(const Object &object)
+void LevelView::addNewObject(const Object &object, const QPoint& position)
 {
     auto newItem = new QGraphicsPixmapItem(object.getPixmap());
     scene()->addItem(newItem);
-    newItem->moveBy(object.getPosition().x(),
-                    object.getPosition().y());
+    newItem->setPos(mapToScene(position));
     newItem->show();
 }
 
 void LevelView::setGrid()
 {
-    for (int x = 0; x <= sceneWidth; x+=10)
+    for (int x = 0; x <= width_; x+=objectSize_)
     {
-        QGraphicsLineItem* item = scene()->addLine(x,0,x,sceneHeight, QPen(Qt::white));
+        QGraphicsLineItem* item = scene()->addLine(x,0,x,height_, QPen(Qt::blue));
         item->setOpacity(0.25);
         item->setFlags(QGraphicsItem::ItemNegativeZStacksBehindParent);
     }
 
-    for (int y = 0; y <= sceneHeight; y+=10)
+    for (int y = 0; y <= height_; y+=objectSize_)
     {
-        QGraphicsLineItem* item =  scene()->addLine(0,y,sceneWidth,y, QPen(Qt::white));
+        QGraphicsLineItem* item =  scene()->addLine(0,y,width_,y, QPen(Qt::blue));
         item->setOpacity(0.25);
         item->setFlags(QGraphicsItem::ItemNegativeZStacksBehindParent);
     }

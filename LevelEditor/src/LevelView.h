@@ -29,7 +29,7 @@ protected:
 
     int getLastMatrix() const;
 
-    void addNewObject(const Object& object);
+    void addNewObject(const Object& object, const QPoint &position);
 
     void setGrid();
 
